@@ -6,8 +6,9 @@ const path = require("path");
 const app = express();
 const PORT = process.env.PORT || 8283;
 
-// In-memory job store
+// In-memory stores
 const jobs = {};
+const sessions = {}; // sessionName -> claude session_id
 
 app.use(express.json());
 
@@ -18,7 +19,7 @@ app.get("/", (_req, res) => {
 
 // Submit a new job
 app.post("/api/run", (req, res) => {
-  const { prompt, cwd } = req.body;
+  const { prompt, cwd, session } = req.body;
 
   if (!prompt || !prompt.trim()) {
     return res.status(400).json({ error: "Prompt is required" });
@@ -27,8 +28,17 @@ app.post("/api/run", (req, res) => {
   const jobId = uuidv4();
   const workDir = cwd || process.cwd();
 
+  // Build command with JSON output for usage stats
   const sanitized = prompt.replace(/'/g, "'\\''");
-  const child = spawn("sh", ["-c", `claude -p '${sanitized}' --dangerously-skip-permissions`], {
+  let cmd = `claude -p '${sanitized}' --dangerously-skip-permissions --output-format json`;
+
+  // Resume session if provided
+  const sessionName = session?.trim();
+  if (sessionName && sessions[sessionName]) {
+    cmd += ` --resume '${sessions[sessionName]}'`;
+  }
+
+  const child = spawn("sh", ["-c", cmd], {
     cwd: workDir,
     env: { ...process.env, HOME: "/home/ccfire" },
     stdio: ["ignore", "pipe", "pipe"],
@@ -39,6 +49,7 @@ app.post("/api/run", (req, res) => {
     startedAt: new Date().toISOString(),
     stdout: "",
     stderr: "",
+    session: sessionName || null,
   };
 
   jobs[jobId] = job;
@@ -47,9 +58,33 @@ app.post("/api/run", (req, res) => {
   child.stderr.on("data", (chunk) => { job.stderr += chunk.toString(); });
 
   child.on("close", (code) => {
-    job.status = code === 0 ? "done" : "error";
     job.exitCode = code;
     job.finishedAt = new Date().toISOString();
+
+    // Parse JSON output for usage stats and result text
+    try {
+      const parsed = JSON.parse(job.stdout);
+      job.status = parsed.is_error ? "error" : "done";
+      job.result = parsed.result || "";
+      job.usage = {
+        duration_ms: parsed.duration_ms,
+        cost_usd: parsed.total_cost_usd,
+        input_tokens: parsed.usage?.input_tokens || 0,
+        output_tokens: parsed.usage?.output_tokens || 0,
+        cache_read_tokens: parsed.usage?.cache_read_input_tokens || 0,
+        cache_creation_tokens: parsed.usage?.cache_creation_input_tokens || 0,
+        num_turns: parsed.num_turns,
+      };
+      // Store session_id for conversation continuity
+      if (parsed.session_id && sessionName) {
+        sessions[sessionName] = parsed.session_id;
+      }
+    } catch {
+      // Fallback if JSON parsing fails
+      job.status = code === 0 ? "done" : "error";
+      job.result = job.stdout;
+      job.usage = null;
+    }
   });
 
   child.on("error", (err) => {
@@ -76,12 +111,19 @@ app.get("/api/status/:jobId", (req, res) => {
   };
 
   if (job.status === "done" || job.status === "error") {
-    result.output = job.stdout;
+    result.output = job.result || job.stdout;
     result.stderr = job.stderr;
     result.exitCode = job.exitCode;
+    result.usage = job.usage;
+    result.session = job.session;
   }
 
   res.json(result);
+});
+
+// List active sessions
+app.get("/api/sessions", (_req, res) => {
+  res.json(Object.keys(sessions));
 });
 
 app.listen(PORT, "0.0.0.0", () => {

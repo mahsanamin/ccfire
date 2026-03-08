@@ -67,6 +67,14 @@
       margin-bottom: 1rem;
     }
 
+    .row {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .row .field { flex: 1; }
+
     .actions {
       display: flex;
       align-items: center;
@@ -98,6 +106,32 @@
     .status.done { color: #22c55e; }
     .status.error { color: #ef4444; }
 
+    .usage-bar {
+      display: none;
+      gap: 1.2rem;
+      margin-bottom: 1rem;
+      padding: 0.7rem 1rem;
+      background: #141414;
+      border: 1px solid #2a2a2a;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      color: #888;
+      flex-wrap: wrap;
+    }
+
+    .usage-bar.visible { display: flex; }
+
+    .usage-bar .item {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .usage-bar .item .val {
+      color: #e0e0e0;
+      font-family: "SF Mono", "Fira Code", monospace;
+    }
+
     .output-box {
       background: #111;
       border: 1px solid #2a2a2a;
@@ -114,6 +148,13 @@
     }
 
     .output-box.visible { display: block; }
+
+    .session-hint {
+      font-size: 0.75rem;
+      color: #555;
+      margin-top: -0.7rem;
+      margin-bottom: 1rem;
+    }
   </style>
 </head>
 <body>
@@ -123,12 +164,30 @@
     <label for="prompt">Prompt</label>
     <textarea id="prompt" placeholder="Enter your prompt for Claude..."></textarea>
 
-    <label for="cwd">Working Directory (optional)</label>
-    <input type="text" id="cwd" placeholder="/path/to/project">
+    <div class="row">
+      <div class="field">
+        <label for="cwd">Working Directory (optional)</label>
+        <input type="text" id="cwd" placeholder="/path/to/project">
+      </div>
+      <div class="field">
+        <label for="session">Session (optional)</label>
+        <input type="text" id="session" placeholder="my-project">
+      </div>
+    </div>
+    <div class="session-hint">Name a session to maintain conversation context across prompts</div>
 
     <div class="actions">
       <button id="run">Run with Claude</button>
       <span id="status" class="status"></span>
+    </div>
+
+    <div id="usage" class="usage-bar">
+      <div class="item">Duration <span class="val" id="u-duration">-</span></div>
+      <div class="item">Cost <span class="val" id="u-cost">-</span></div>
+      <div class="item">In <span class="val" id="u-in">-</span></div>
+      <div class="item">Out <span class="val" id="u-out">-</span></div>
+      <div class="item">Cached <span class="val" id="u-cache">-</span></div>
+      <div class="item">Turns <span class="val" id="u-turns">-</span></div>
     </div>
 
     <div id="output" class="output-box"></div>
@@ -137,9 +196,11 @@
   <script>
     const $prompt = document.getElementById("prompt");
     const $cwd = document.getElementById("cwd");
+    const $session = document.getElementById("session");
     const $run = document.getElementById("run");
     const $status = document.getElementById("status");
     const $output = document.getElementById("output");
+    const $usage = document.getElementById("usage");
 
     let pollTimer = null;
 
@@ -150,13 +211,20 @@
       $run.disabled = true;
       $output.classList.remove("visible");
       $output.textContent = "";
+      $usage.classList.remove("visible");
       setStatus("running", "Running...");
 
       try {
+        const body = { prompt };
+        const cwd = $cwd.value.trim();
+        const session = $session.value.trim();
+        if (cwd) body.cwd = cwd;
+        if (session) body.session = session;
+
         const res = await fetch("/api/run", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt, cwd: $cwd.value.trim() || undefined }),
+          body: JSON.stringify(body),
         });
 
         const { job_id, error } = await res.json();
@@ -178,11 +246,13 @@
           clearInterval(pollTimer);
           setStatus("done", "Done");
           showOutput(data.output);
+          showUsage(data.usage);
           $run.disabled = false;
         } else if (data.status === "error") {
           clearInterval(pollTimer);
           setStatus("error", "Error (exit " + data.exitCode + ")");
           showOutput(data.output || data.stderr || "Unknown error");
+          showUsage(data.usage);
           $run.disabled = false;
         }
       } catch {
@@ -200,6 +270,17 @@
     function showOutput(text) {
       $output.textContent = text;
       $output.classList.add("visible");
+    }
+
+    function showUsage(usage) {
+      if (!usage) return;
+      document.getElementById("u-duration").textContent = (usage.duration_ms / 1000).toFixed(1) + "s";
+      document.getElementById("u-cost").textContent = "$" + usage.cost_usd.toFixed(4);
+      document.getElementById("u-in").textContent = usage.input_tokens.toLocaleString();
+      document.getElementById("u-out").textContent = usage.output_tokens.toLocaleString();
+      document.getElementById("u-cache").textContent = usage.cache_read_tokens.toLocaleString();
+      document.getElementById("u-turns").textContent = usage.num_turns;
+      $usage.classList.add("visible");
     }
   </script>
 </body>
