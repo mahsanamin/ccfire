@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ccfire</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0a0a0a;
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 800px;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      color: #fff;
+    }
+
+    h1 span { color: #f97316; }
+
+    label {
+      display: block;
+      font-size: 0.8rem;
+      color: #888;
+      margin-bottom: 0.4rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    textarea, input[type="text"] {
+      width: 100%;
+      background: #141414;
+      border: 1px solid #2a2a2a;
+      border-radius: 6px;
+      color: #e0e0e0;
+      font-family: "SF Mono", "Fira Code", monospace;
+      font-size: 0.9rem;
+      padding: 0.75rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    textarea:focus, input[type="text"]:focus {
+      border-color: #f97316;
+    }
+
+    textarea {
+      height: 160px;
+      resize: vertical;
+      margin-bottom: 1rem;
+    }
+
+    input[type="text"] {
+      margin-bottom: 1rem;
+    }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    button {
+      background: #f97316;
+      color: #000;
+      border: none;
+      border-radius: 6px;
+      padding: 0.6rem 1.4rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    button:hover { opacity: 0.85; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .status {
+      font-size: 0.85rem;
+      color: #888;
+    }
+
+    .status.running { color: #f59e0b; }
+    .status.done { color: #22c55e; }
+    .status.error { color: #ef4444; }
+
+    .output-box {
+      background: #111;
+      border: 1px solid #2a2a2a;
+      border-radius: 6px;
+      padding: 1rem;
+      font-family: "SF Mono", "Fira Code", monospace;
+      font-size: 0.85rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 500px;
+      overflow-y: auto;
+      display: none;
+      line-height: 1.5;
+    }
+
+    .output-box.visible { display: block; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1><span>cc</span>fire</h1>
+
+    <label for="prompt">Prompt</label>
+    <textarea id="prompt" placeholder="Enter your prompt for Claude..."></textarea>
+
+    <label for="cwd">Working Directory (optional)</label>
+    <input type="text" id="cwd" placeholder="/path/to/project">
+
+    <div class="actions">
+      <button id="run">Run with Claude</button>
+      <span id="status" class="status"></span>
+    </div>
+
+    <div id="output" class="output-box"></div>
+  </div>
+
+  <script>
+    const $prompt = document.getElementById("prompt");
+    const $cwd = document.getElementById("cwd");
+    const $run = document.getElementById("run");
+    const $status = document.getElementById("status");
+    const $output = document.getElementById("output");
+
+    let pollTimer = null;
+
+    $run.addEventListener("click", async () => {
+      const prompt = $prompt.value.trim();
+      if (!prompt) return;
+
+      $run.disabled = true;
+      $output.classList.remove("visible");
+      $output.textContent = "";
+      setStatus("running", "Running...");
+
+      try {
+        const res = await fetch("/api/run", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt, cwd: $cwd.value.trim() || undefined }),
+        });
+
+        const { job_id, error } = await res.json();
+        if (error) throw new Error(error);
+
+        pollTimer = setInterval(() => pollStatus(job_id), 2000);
+      } catch (err) {
+        setStatus("error", err.message);
+        $run.disabled = false;
+      }
+    });
+
+    async function pollStatus(jobId) {
+      try {
+        const res = await fetch(`/api/status/${jobId}`);
+        const data = await res.json();
+
+        if (data.status === "done") {
+          clearInterval(pollTimer);
+          setStatus("done", "Done");
+          showOutput(data.output);
+          $run.disabled = false;
+        } else if (data.status === "error") {
+          clearInterval(pollTimer);
+          setStatus("error", "Error (exit " + data.exitCode + ")");
+          showOutput(data.output || data.stderr || "Unknown error");
+          $run.disabled = false;
+        }
+      } catch {
+        clearInterval(pollTimer);
+        setStatus("error", "Lost connection");
+        $run.disabled = false;
+      }
+    }
+
+    function setStatus(type, text) {
+      $status.className = "status " + type;
+      $status.textContent = text;
+    }
+
+    function showOutput(text) {
+      $output.textContent = text;
+      $output.classList.add("visible");
+    }
+  </script>
+</body>
+</html>

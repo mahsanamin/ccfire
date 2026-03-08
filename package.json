@@ -1,0 +1,13 @@
+{
+  "name": "ccfire",
+  "version": "1.0.0",
+  "description": "Remote trigger interface for Claude Code",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "uuid": "^10.0.0"
+  }
+}

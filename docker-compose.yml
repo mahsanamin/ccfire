@@ -1,0 +1,13 @@
+services:
+  ccfire:
+    build: .
+    container_name: ccfire
+    ports:
+      - "8283:8283"
+      - "8322:22"
+    volumes:
+      - ./outputs:/app/outputs
+      - ccfire-claude-config:/home/ccfire/.claude
+
+volumes:
+  ccfire-claude-config:

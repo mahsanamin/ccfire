@@ -1,0 +1,31 @@
+#!/bin/bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR"
+
+case "${1:-}" in
+  start)
+    docker compose up -d --build
+    echo "ccfire is running at http://localhost:8283"
+    ;;
+  stop)
+    docker compose down
+    ;;
+  restart)
+    docker compose restart
+    ;;
+  ssh)
+    docker exec -it -u ccfire ccfire /bin/bash
+    ;;
+  logs)
+    docker compose logs -f
+    ;;
+  status)
+    docker compose ps
+    ;;
+  *)
+    echo "Usage: ./ccfire {start|stop|restart|ssh|logs|status}"
+    exit 1
+    ;;
+esac
