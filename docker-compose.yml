@@ -2,6 +2,7 @@ services:
   ccfire:
     build: .
     container_name: ccfire
+    restart: unless-stopped
     ports:
       - "8283:8283"
       - "8322:22"
