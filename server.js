@@ -28,7 +28,16 @@ app.post("/api/run", (req, res) => {
 
   const jobId = uuidv4();
   const PROJECTS_ROOT = "/projects";
-  const workDir = cwd ? path.join(PROJECTS_ROOT, cwd) : PROJECTS_ROOT;
+
+  // cwd can be: project name (resolved under /projects), absolute path, or empty
+  let workDir = PROJECTS_ROOT;
+  if (cwd) {
+    if (path.isAbsolute(cwd)) {
+      workDir = cwd;
+    } else {
+      workDir = path.join(PROJECTS_ROOT, cwd);
+    }
+  }
 
   // Build command with JSON output for usage stats
   const sanitized = prompt.replace(/'/g, "'\\''");

@@ -75,10 +75,27 @@
     .row {
       display: flex;
       gap: 1rem;
-      margin-bottom: 1rem;
+      margin-bottom: 0.3rem;
     }
 
     .row .field { flex: 1; }
+
+    .mode-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      font-size: 0.75rem;
+      color: #555;
+    }
+
+    .mode-toggle a {
+      color: #f97316;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .mode-toggle a:hover { text-decoration: underline; }
 
     .actions {
       display: flex;
@@ -154,12 +171,7 @@
 
     .output-box.visible { display: block; }
 
-    .session-hint {
-      font-size: 0.75rem;
-      color: #555;
-      margin-top: -0.7rem;
-      margin-bottom: 1rem;
-    }
+    .hidden { display: none !important; }
   </style>
 </head>
 <body>
@@ -170,18 +182,25 @@
     <textarea id="prompt" placeholder="Enter your prompt for Claude..."></textarea>
 
     <div class="row">
-      <div class="field">
+      <div class="field" id="project-field">
         <label for="project">Project</label>
         <select id="project">
-          <option value="">None (default)</option>
+          <option value="">None (general prompt)</option>
         </select>
+      </div>
+      <div class="field hidden" id="cwd-field">
+        <label for="cwd">Working Directory</label>
+        <input type="text" id="cwd" placeholder="/absolute/path or relative-to-projects">
       </div>
       <div class="field">
         <label for="session">Session</label>
-        <input type="text" id="session" placeholder="my-project">
+        <input type="text" id="session" placeholder="my-session">
       </div>
     </div>
-    <div class="session-hint">Select a project to set the working directory. Name a session to keep conversation context.</div>
+    <div class="mode-toggle">
+      <span id="mode-label">Select a mounted project or</span>
+      <a id="mode-switch">use a custom path</a>
+    </div>
 
     <div class="actions">
       <button id="run">Run with Claude</button>
@@ -203,13 +222,33 @@
   <script>
     const $prompt = document.getElementById("prompt");
     const $project = document.getElementById("project");
+    const $projectField = document.getElementById("project-field");
+    const $cwd = document.getElementById("cwd");
+    const $cwdField = document.getElementById("cwd-field");
     const $session = document.getElementById("session");
     const $run = document.getElementById("run");
     const $status = document.getElementById("status");
     const $output = document.getElementById("output");
     const $usage = document.getElementById("usage");
+    const $modeSwitch = document.getElementById("mode-switch");
+    const $modeLabel = document.getElementById("mode-label");
 
     let pollTimer = null;
+    let useCustomPath = false;
+
+    // Toggle between project picker and free-form path
+    $modeSwitch.addEventListener("click", () => {
+      useCustomPath = !useCustomPath;
+      $projectField.classList.toggle("hidden", useCustomPath);
+      $cwdField.classList.toggle("hidden", !useCustomPath);
+      if (useCustomPath) {
+        $modeLabel.textContent = "Using custom path or";
+        $modeSwitch.textContent = "pick a project";
+      } else {
+        $modeLabel.textContent = "Select a mounted project or";
+        $modeSwitch.textContent = "use a custom path";
+      }
+    });
 
     // Load available projects on page load
     async function loadProjects() {
@@ -238,9 +277,9 @@
 
       try {
         const body = { prompt };
-        const project = $project.value;
+        const cwd = useCustomPath ? $cwd.value.trim() : $project.value;
         const session = $session.value.trim();
-        if (project) body.cwd = project;
+        if (cwd) body.cwd = cwd;
         if (session) body.session = session;
 
         const res = await fetch("/api/run", {
