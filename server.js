@@ -52,7 +52,7 @@ app.post("/api/run", (req, res) => {
   }
 
   const jobId = uuidv4();
-  const PROJECTS_ROOT = "/projects";
+  const PROJECTS_ROOT = process.env.PROJECTS_ROOT || "/projects";
 
   const sessionName = session?.trim();
 
@@ -85,7 +85,7 @@ app.post("/api/run", (req, res) => {
 
   const child = spawn("sh", ["-c", cmd], {
     cwd: workDir,
-    env: { ...process.env, HOME: "/home/ccfire" },
+    env: { ...process.env, HOME: process.env.HOME || "/home/ccfire" },
     stdio: ["ignore", "pipe", "pipe"],
   });
 
@@ -242,7 +242,7 @@ app.get("/api/sessions/:name/messages", (req, res) => {
 
 // List available projects
 app.get("/api/projects", (_req, res) => {
-  const PROJECTS_ROOT = "/projects";
+  const PROJECTS_ROOT = process.env.PROJECTS_ROOT || "/projects";
   try {
     const entries = fs.readdirSync(PROJECTS_ROOT, { withFileTypes: true });
     const dirs = entries.filter((e) => e.isDirectory()).map((e) => e.name);
