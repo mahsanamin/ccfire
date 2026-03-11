@@ -1,6 +1,7 @@
 const express = require("express");
 const { spawn } = require("child_process");
 const { v4: uuidv4 } = require("uuid");
+const fs = require("fs");
 const path = require("path");
 
 const app = express();
@@ -26,7 +27,8 @@ app.post("/api/run", (req, res) => {
   }
 
   const jobId = uuidv4();
-  const workDir = cwd || process.cwd();
+  const PROJECTS_ROOT = "/projects";
+  const workDir = cwd ? path.join(PROJECTS_ROOT, cwd) : PROJECTS_ROOT;
 
   // Build command with JSON output for usage stats
   const sanitized = prompt.replace(/'/g, "'\\''");
@@ -124,6 +126,18 @@ app.get("/api/status/:jobId", (req, res) => {
 // List active sessions
 app.get("/api/sessions", (_req, res) => {
   res.json(Object.keys(sessions));
+});
+
+// List available projects
+app.get("/api/projects", (_req, res) => {
+  const PROJECTS_ROOT = "/projects";
+  try {
+    const entries = fs.readdirSync(PROJECTS_ROOT, { withFileTypes: true });
+    const dirs = entries.filter((e) => e.isDirectory()).map((e) => e.name);
+    res.json(dirs);
+  } catch {
+    res.json([]);
+  }
 });
 
 app.listen(PORT, "0.0.0.0", () => {

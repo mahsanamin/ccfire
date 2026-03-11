@@ -9,6 +9,7 @@ services:
     volumes:
       - ./outputs:/app/outputs
       - ccfire-claude-config:/home/ccfire/.claude
+      - ${PROJECTS_DIR:-.}:/projects
 
 volumes:
   ccfire-claude-config:

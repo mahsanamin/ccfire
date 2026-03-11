@@ -15,7 +15,7 @@ curl -X POST http://localhost:8283/api/run \
   -H "Content-Type: application/json" \
   -d '{
     "prompt": "explain this codebase",
-    "cwd": "/app/my-project",
+    "cwd": "my-project",
     "session": "my-project"
   }'
 ```
@@ -23,7 +23,7 @@ curl -X POST http://localhost:8283/api/run \
 | Field     | Type   | Required | Description                                                        |
 | --------- | ------ | -------- | ------------------------------------------------------------------ |
 | `prompt`  | string | Yes      | The prompt to send to Claude                                       |
-| `cwd`     | string | No       | Working directory for Claude to operate in (defaults to `/app`)    |
+| `cwd`     | string | No       | Project directory name (relative to mounted `PROJECTS_DIR`). Defaults to `/projects` root |
 | `session` | string | No       | Session name for conversation continuity. Reuse the same name to maintain context across multiple prompts |
 
 ### Response
@@ -132,6 +132,24 @@ curl http://localhost:8283/api/sessions
 
 ---
 
+## GET /api/projects
+
+List available project directories (from mounted `PROJECTS_DIR`).
+
+### Request
+
+```bash
+curl http://localhost:8283/api/projects
+```
+
+### Response
+
+```json
+["my-app", "backend-api", "infra"]
+```
+
+---
+
 ## Usage Patterns
 
 ### One-shot prompt (no session)
@@ -139,7 +157,7 @@ curl http://localhost:8283/api/sessions
 ```bash
 curl -X POST http://localhost:8283/api/run \
   -H "Content-Type: application/json" \
-  -d '{"prompt": "what does this function do?"}'
+  -d '{"prompt": "what does this function do?", "cwd": "my-app"}'
 ```
 
 ### Multi-turn conversation
@@ -148,7 +166,7 @@ curl -X POST http://localhost:8283/api/run \
 # First message — creates session
 curl -X POST http://localhost:8283/api/run \
   -H "Content-Type: application/json" \
-  -d '{"prompt": "read the codebase and summarize it", "session": "onboard"}'
+  -d '{"prompt": "read the codebase and summarize it", "cwd": "my-app", "session": "onboard"}'
 
 # Wait for completion, then follow up — same session
 curl -X POST http://localhost:8283/api/run \
@@ -161,7 +179,7 @@ curl -X POST http://localhost:8283/api/run \
 ```bash
 JOB_ID=$(curl -s -X POST http://localhost:8283/api/run \
   -H "Content-Type: application/json" \
-  -d '{"prompt": "say hello"}' | jq -r '.job_id')
+  -d '{"prompt": "say hello", "cwd": "my-app"}' | jq -r '.job_id')
 
 while true; do
   RESULT=$(curl -s http://localhost:8283/api/status/$JOB_ID)
@@ -182,7 +200,7 @@ import requests, time
 # Submit
 r = requests.post("http://localhost:8283/api/run", json={
     "prompt": "refactor this file for readability",
-    "cwd": "/app/my-project",
+    "cwd": "my-app",
     "session": "refactor"
 })
 job_id = r.json()["job_id"]

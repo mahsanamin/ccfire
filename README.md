@@ -4,17 +4,37 @@ A self-hosted web interface for [Claude Code](https://docs.anthropic.com/en/docs
 
 Instead of being tied to your terminal, ccfire acts as a lightweight access point to your existing Claude Code installation — same session, same user, no API keys involved. Spin it up via Docker, optionally tunnel through Tailscale, and fire off coding tasks from anywhere.
 
-**Features**: usage tracking (cost, tokens, duration), multi-turn conversation sessions, REST API for scripting and automation.
+**Features**: project directory mounting, usage tracking (cost, tokens, duration), multi-turn conversation sessions, REST API for scripting.
 
 ## Quick Start
 
 ```bash
-./ccfire start              # build & run
-./ccfire ssh                # shell into container
-claude                      # authenticate once, then exit
+# 1. Configure your projects directory
+cp .env.example .env
+# Edit .env and set PROJECTS_DIR to your repos path (e.g. ~/repos)
+
+# 2. Start the container
+./ccfire start
+
+# 3. Shell into the container and authenticate Claude
+./ccfire ssh
+claude          # follow the auth flow, then exit
+
+# 4. Open the web UI
+open http://localhost:8283
 ```
 
-Open **http://localhost:8283** and start prompting.
+Select a project from the dropdown, type a prompt, and go.
+
+## Mounting Projects
+
+ccfire mounts your host projects directory at `/projects` inside the container. Set it in `.env`:
+
+```bash
+PROJECTS_DIR=/path/to/your/repos
+```
+
+All subdirectories appear in the **Project** dropdown in the web UI. Claude can read and modify files in the selected project.
 
 ## Commands
 
@@ -32,27 +52,28 @@ Open **http://localhost:8283** and start prompting.
 Full reference: [docs/API.md](docs/API.md)
 
 ```bash
-# Fire a prompt
+# Fire a prompt against a project
 curl -X POST http://localhost:8283/api/run \
   -H "Content-Type: application/json" \
-  -d '{"prompt": "explain this code", "session": "my-project"}'
+  -d '{"prompt": "explain the auth flow", "cwd": "my-project", "session": "review"}'
 
 # Poll for result
 curl http://localhost:8283/api/status/<job_id>
 ```
 
-| Endpoint                  | Description                    |
-| ------------------------- | ------------------------------ |
-| `POST /api/run`           | Submit a prompt                |
-| `GET /api/status/:job_id` | Poll for result + usage stats  |
-| `GET /api/sessions`       | List active sessions           |
+| Endpoint                  | Description                              |
+| ------------------------- | ---------------------------------------- |
+| `POST /api/run`           | Submit a prompt                          |
+| `GET /api/status/:job_id` | Poll for result + usage stats            |
+| `GET /api/sessions`       | List active sessions                     |
+| `GET /api/projects`       | List available projects from mounted dir |
 
 ## How It Works
 
 ```
 Browser / curl / script
         |
-   POST /api/run  -->  Express server  -->  Claude Code CLI
+   POST /api/run  -->  Express server  -->  Claude Code CLI (in /projects/<name>)
         |                                        |
    GET /api/status  <--  { output, usage }  <----+
 ```
