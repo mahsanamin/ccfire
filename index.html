@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>ccfire</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0%25' stop-color='%23f97316'/><stop offset='100%25' stop-color='%23ea580c'/></linearGradient></defs><circle cx='50' cy='50' r='45' fill='%230a0a0a'/><path d='M30 62 Q32 40 50 30 Q42 48 48 55 Q54 42 60 38 Q68 50 65 65 Q60 72 50 74 Q40 72 30 62Z' fill='url(%23g)'/></svg>">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -11,276 +12,729 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background: #0a0a0a;
       color: #e0e0e0;
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      padding: 2rem;
+      height: 100dvh;
+      overflow: hidden;
     }
 
-    .container {
-      width: 100%;
-      max-width: 800px;
+    .view { display: none; height: 100dvh; }
+    .view.active { display: flex; flex-direction: column; }
+
+    /* ─── Landing View ─── */
+    #landing-view {
+      padding: 2rem;
+      overflow-y: auto;
+    }
+
+    .landing-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2rem;
     }
 
     h1 {
       font-size: 1.5rem;
       font-weight: 600;
-      margin-bottom: 1.5rem;
       color: #fff;
     }
-
     h1 span { color: #f97316; }
 
-    label {
+    .new-chat-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #f97316;
+      color: #000;
+      border: none;
+      font-size: 1.5rem;
+      font-weight: 300;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.2s, transform 0.15s;
+    }
+    .new-chat-btn:hover { opacity: 0.85; transform: scale(1.05); }
+
+    .section-label {
+      font-size: 0.75rem;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.75rem;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: #444;
+    }
+
+    .empty-state p { margin-bottom: 0.5rem; }
+    .empty-state .hint { font-size: 0.85rem; color: #333; }
+
+    .session-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.85rem 1rem;
+      background: #111;
+      border: 1px solid #1e1e1e;
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .session-item:hover {
+      border-color: #f97316;
+      background: #141414;
+    }
+
+    .session-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: #1a1a1a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      color: #f97316;
+      flex-shrink: 0;
+    }
+
+    .session-info { flex: 1; min-width: 0; }
+
+    .session-name {
+      font-weight: 500;
+      font-size: 0.95rem;
+      color: #e0e0e0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .session-meta {
+      font-size: 0.8rem;
+      color: #555;
+      margin-top: 0.15rem;
+    }
+
+    .session-meta .tag {
+      display: inline-block;
+      background: #1a1a1a;
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      color: #888;
+      margin-right: 0.3rem;
+    }
+
+    .session-arrow {
+      color: #333;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    /* ─── Setup View ─── */
+    #setup-view {
+      padding: 2rem;
+      gap: 1rem;
+    }
+
+    .setup-steps {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      padding-top: 1rem;
+    }
+
+    .step-group label {
       display: block;
       font-size: 0.8rem;
       color: #888;
-      margin-bottom: 0.4rem;
+      margin-bottom: 0.5rem;
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
 
-    textarea, input[type="text"], select {
+    input[type="text"], select {
       width: 100%;
       background: #141414;
       border: 1px solid #2a2a2a;
-      border-radius: 6px;
+      border-radius: 8px;
       color: #e0e0e0;
-      font-family: "SF Mono", "Fira Code", monospace;
-      font-size: 0.9rem;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 1rem;
       padding: 0.75rem;
       outline: none;
       transition: border-color 0.2s;
     }
-
-    textarea:focus, input[type="text"]:focus, select:focus {
-      border-color: #f97316;
-    }
-
-    textarea {
-      height: 160px;
-      resize: vertical;
-      margin-bottom: 1rem;
-    }
-
-    input[type="text"], select {
-      margin-bottom: 1rem;
-    }
+    input[type="text"]:focus, select:focus { border-color: #f97316; }
 
     select option {
       background: #141414;
       color: #e0e0e0;
     }
 
-    .row {
+    .project-choice {
       display: flex;
-      gap: 1rem;
-      margin-bottom: 0.3rem;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
     }
 
-    .row .field { flex: 1; }
-
-    .mode-toggle {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      margin-bottom: 1rem;
-      font-size: 0.75rem;
-      color: #555;
-    }
-
-    .mode-toggle a {
-      color: #f97316;
+    .choice-btn {
+      flex: 1;
+      padding: 0.85rem;
+      background: #141414;
+      border: 2px solid #2a2a2a;
+      border-radius: 10px;
+      color: #888;
+      font-size: 0.9rem;
       cursor: pointer;
-      text-decoration: none;
+      transition: border-color 0.2s, color 0.2s;
+      text-align: center;
     }
+    .choice-btn:hover { border-color: #555; color: #ccc; }
+    .choice-btn.selected { border-color: #f97316; color: #f97316; }
 
-    .mode-toggle a:hover { text-decoration: underline; }
-
-    .actions {
+    .setup-actions {
       display: flex;
-      align-items: center;
-      gap: 1rem;
-      margin-bottom: 1.5rem;
+      gap: 0.75rem;
+      padding-top: 1rem;
     }
 
-    button {
+    .btn-secondary {
+      background: transparent;
+      border: 1px solid #2a2a2a;
+      color: #888;
+      border-radius: 8px;
+      padding: 0.7rem 1.2rem;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .btn-secondary:hover { border-color: #555; color: #ccc; }
+
+    .btn-primary {
+      flex: 1;
       background: #f97316;
       color: #000;
       border: none;
-      border-radius: 6px;
-      padding: 0.6rem 1.4rem;
-      font-size: 0.9rem;
+      border-radius: 8px;
+      padding: 0.7rem 1.2rem;
+      font-size: 0.95rem;
       font-weight: 600;
       cursor: pointer;
       transition: opacity 0.2s;
     }
-
-    button:hover { opacity: 0.85; }
-    button:disabled { opacity: 0.4; cursor: not-allowed; }
-
-    .status {
-      font-size: 0.85rem;
-      color: #888;
-    }
-
-    .status.running { color: #f59e0b; }
-    .status.done { color: #22c55e; }
-    .status.error { color: #ef4444; }
-
-    .usage-bar {
-      display: none;
-      gap: 1.2rem;
-      margin-bottom: 1rem;
-      padding: 0.7rem 1rem;
-      background: #141414;
-      border: 1px solid #2a2a2a;
-      border-radius: 6px;
-      font-size: 0.8rem;
-      color: #888;
-      flex-wrap: wrap;
-    }
-
-    .usage-bar.visible { display: flex; }
-
-    .usage-bar .item {
-      display: flex;
-      align-items: center;
-      gap: 0.35rem;
-    }
-
-    .usage-bar .item .val {
-      color: #e0e0e0;
-      font-family: "SF Mono", "Fira Code", monospace;
-    }
-
-    .output-box {
-      background: #111;
-      border: 1px solid #2a2a2a;
-      border-radius: 6px;
-      padding: 1rem;
-      font-family: "SF Mono", "Fira Code", monospace;
-      font-size: 0.85rem;
-      white-space: pre-wrap;
-      word-break: break-word;
-      max-height: 500px;
-      overflow-y: auto;
-      display: none;
-      line-height: 1.5;
-    }
-
-    .output-box.visible { display: block; }
+    .btn-primary:hover { opacity: 0.85; }
+    .btn-primary:disabled { opacity: 0.3; cursor: not-allowed; }
 
     .hidden { display: none !important; }
+
+    /* ─── Chat View ─── */
+    #chat-view { background: #0a0a0a; }
+
+    .chat-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid #1a1a1a;
+      background: #0d0d0d;
+      flex-shrink: 0;
+    }
+
+    .back-btn {
+      background: none;
+      border: none;
+      color: #f97316;
+      font-size: 1.3rem;
+      cursor: pointer;
+      padding: 0.2rem;
+      line-height: 1;
+    }
+
+    .chat-title { flex: 1; min-width: 0; }
+    .chat-title-name {
+      font-weight: 600;
+      font-size: 1rem;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .chat-title-project {
+      font-size: 0.75rem;
+      color: #555;
+      margin-top: 0.1rem;
+    }
+
+    .model-select {
+      width: auto;
+      min-width: 0;
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 6px;
+      color: #888;
+      font-size: 0.75rem;
+      padding: 0.35rem 0.5rem;
+      outline: none;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+    .model-select:focus { border-color: #f97316; }
+    .model-select option { background: #141414; color: #e0e0e0; }
+
+    .messages-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .message-row {
+      display: flex;
+      flex-direction: column;
+      max-width: 88%;
+    }
+    .message-row.user { align-self: flex-end; align-items: flex-end; }
+    .message-row.assistant { align-self: flex-start; align-items: flex-start; }
+
+    .message-sender {
+      font-size: 0.7rem;
+      color: #555;
+      margin-bottom: 0.25rem;
+      padding: 0 0.3rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .message-bubble {
+      padding: 0.7rem 1rem;
+      border-radius: 14px;
+      font-size: 0.9rem;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .message-row.user .message-bubble {
+      background: #f97316;
+      color: #000;
+      border-bottom-right-radius: 4px;
+    }
+
+    .message-row.assistant .message-bubble {
+      background: #161616;
+      color: #e0e0e0;
+      border: 1px solid #222;
+      border-bottom-left-radius: 4px;
+      font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+      font-size: 0.85rem;
+    }
+
+    .message-usage {
+      font-size: 0.7rem;
+      color: #444;
+      margin-top: 0.3rem;
+      padding: 0 0.3rem;
+    }
+
+    .thinking-dots::after {
+      content: "";
+      animation: dots 1.2s steps(4, end) infinite;
+    }
+    @keyframes dots {
+      0% { content: ""; }
+      25% { content: "."; }
+      50% { content: ".."; }
+      75% { content: "..."; }
+    }
+
+    .chat-input-area {
+      border-top: 1px solid #1a1a1a;
+      background: #0d0d0d;
+      padding: 0.75rem 1rem;
+      flex-shrink: 0;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 0.5rem;
+      align-items: flex-end;
+    }
+
+    .chat-textarea {
+      flex: 1;
+      background: #141414;
+      border: 1px solid #2a2a2a;
+      border-radius: 12px;
+      color: #e0e0e0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 0.95rem;
+      padding: 0.65rem 0.85rem;
+      outline: none;
+      resize: none;
+      max-height: 120px;
+      overflow-y: auto;
+      line-height: 1.4;
+      transition: border-color 0.2s;
+    }
+    .chat-textarea:focus { border-color: #f97316; }
+
+    .send-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #f97316;
+      color: #000;
+      border: none;
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: opacity 0.2s;
+    }
+    .send-btn:hover { opacity: 0.85; }
+    .send-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .chat-status {
+      font-size: 0.8rem;
+      color: #555;
+      margin-top: 0.4rem;
+      min-height: 1.2em;
+    }
+    .chat-status.running { color: #f59e0b; }
+    .chat-status.error { color: #ef4444; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1><span>cc</span>fire</h1>
 
-    <label for="prompt">Prompt</label>
-    <textarea id="prompt" placeholder="Enter your prompt for Claude..."></textarea>
+  <!-- ─── Landing View ─── -->
+  <div id="landing-view" class="view active">
+    <div class="landing-header">
+      <h1><span>cc</span>fire</h1>
+      <button class="new-chat-btn" id="new-chat-btn" title="New Chat">+</button>
+    </div>
+    <div class="section-label">Sessions</div>
+    <div id="sessions-list"></div>
+  </div>
 
-    <div class="row">
-      <div class="field" id="project-field">
-        <label for="project">Project</label>
-        <select id="project">
-          <option value="">None (general prompt)</option>
+  <!-- ─── Setup View ─── -->
+  <div id="setup-view" class="view">
+    <div class="setup-steps">
+      <div class="step-group">
+        <label>Session Name</label>
+        <input type="text" id="setup-name" placeholder="e.g. refactor-auth">
+      </div>
+      <div class="step-group">
+        <label>What kind of session?</label>
+        <div class="project-choice">
+          <button class="choice-btn selected" id="choice-free">Free Chat</button>
+          <button class="choice-btn" id="choice-project">Project</button>
+        </div>
+        <select id="setup-project" class="hidden">
+          <option value="">Select a project...</option>
         </select>
       </div>
-      <div class="field hidden" id="cwd-field">
-        <label for="cwd">Working Directory</label>
-        <input type="text" id="cwd" placeholder="/absolute/path or relative-to-projects">
+      <div class="step-group">
+        <label>Model</label>
+        <select id="setup-model">
+          <option value="claude-haiku-4-5-20251001">Haiku 4.5 (fastest, cheapest)</option>
+          <option value="claude-sonnet-4-6">Sonnet 4.6 (balanced)</option>
+          <option value="claude-opus-4-6">Opus 4.6 (most capable)</option>
+        </select>
       </div>
-      <div class="field">
-        <label for="session">Session</label>
-        <input type="text" id="session" placeholder="my-session">
+    </div>
+    <div class="setup-actions">
+      <button class="btn-secondary" id="setup-cancel">Cancel</button>
+      <button class="btn-primary" id="setup-start">Start Chat</button>
+    </div>
+  </div>
+
+  <!-- ─── Chat View ─── -->
+  <div id="chat-view" class="view">
+    <div class="chat-header">
+      <button class="back-btn" id="chat-back">&larr;</button>
+      <div class="chat-title">
+        <div class="chat-title-name" id="chat-title-name"></div>
+        <div class="chat-title-project" id="chat-title-project"></div>
       </div>
+      <select class="model-select" id="chat-model">
+        <option value="claude-haiku-4-5-20251001">Haiku</option>
+        <option value="claude-sonnet-4-6">Sonnet</option>
+        <option value="claude-opus-4-6">Opus</option>
+      </select>
     </div>
-    <div class="mode-toggle">
-      <span id="mode-label">Select a mounted project or</span>
-      <a id="mode-switch">use a custom path</a>
+    <div class="messages-container" id="messages-container"></div>
+    <div class="chat-input-area">
+      <div class="input-row">
+        <textarea class="chat-textarea" id="chat-input" placeholder="Send a message..." rows="1"></textarea>
+        <button class="send-btn" id="send-btn" title="Send">&#9654;</button>
+      </div>
+      <div class="chat-status" id="chat-status"></div>
     </div>
-
-    <div class="actions">
-      <button id="run">Run with Claude</button>
-      <span id="status" class="status"></span>
-    </div>
-
-    <div id="usage" class="usage-bar">
-      <div class="item">Duration <span class="val" id="u-duration">-</span></div>
-      <div class="item">Cost <span class="val" id="u-cost">-</span></div>
-      <div class="item">In <span class="val" id="u-in">-</span></div>
-      <div class="item">Out <span class="val" id="u-out">-</span></div>
-      <div class="item">Cached <span class="val" id="u-cache">-</span></div>
-      <div class="item">Turns <span class="val" id="u-turns">-</span></div>
-    </div>
-
-    <div id="output" class="output-box"></div>
   </div>
 
   <script>
-    const $prompt = document.getElementById("prompt");
-    const $project = document.getElementById("project");
-    const $projectField = document.getElementById("project-field");
-    const $cwd = document.getElementById("cwd");
-    const $cwdField = document.getElementById("cwd-field");
-    const $session = document.getElementById("session");
-    const $run = document.getElementById("run");
-    const $status = document.getElementById("status");
-    const $output = document.getElementById("output");
-    const $usage = document.getElementById("usage");
-    const $modeSwitch = document.getElementById("mode-switch");
-    const $modeLabel = document.getElementById("mode-label");
+    // ─── Elements ───
+    const $landingView = document.getElementById("landing-view");
+    const $setupView = document.getElementById("setup-view");
+    const $chatView = document.getElementById("chat-view");
+    const $sessionsList = document.getElementById("sessions-list");
+    const $newChatBtn = document.getElementById("new-chat-btn");
 
+    const $setupName = document.getElementById("setup-name");
+    const $setupProject = document.getElementById("setup-project");
+    const $choiceFree = document.getElementById("choice-free");
+    const $choiceProject = document.getElementById("choice-project");
+    const $setupModel = document.getElementById("setup-model");
+    const $setupCancel = document.getElementById("setup-cancel");
+    const $setupStart = document.getElementById("setup-start");
+
+    const $chatBack = document.getElementById("chat-back");
+    const $chatModel = document.getElementById("chat-model");
+    const $chatTitleName = document.getElementById("chat-title-name");
+    const $chatTitleProject = document.getElementById("chat-title-project");
+    const $messagesContainer = document.getElementById("messages-container");
+    const $chatInput = document.getElementById("chat-input");
+    const $sendBtn = document.getElementById("send-btn");
+    const $chatStatus = document.getElementById("chat-status");
+
+    // ─── State ───
+    let currentSession = null; // { name, project, model }
+    let sending = false;
     let pollTimer = null;
-    let useCustomPath = false;
+    let useProject = false;
 
-    // Toggle between project picker and free-form path
-    $modeSwitch.addEventListener("click", () => {
-      useCustomPath = !useCustomPath;
-      $projectField.classList.toggle("hidden", useCustomPath);
-      $cwdField.classList.toggle("hidden", !useCustomPath);
-      if (useCustomPath) {
-        $modeLabel.textContent = "Using custom path or";
-        $modeSwitch.textContent = "pick a project";
-      } else {
-        $modeLabel.textContent = "Select a mounted project or";
-        $modeSwitch.textContent = "use a custom path";
+    // ─── Navigation ───
+    function showView(id) {
+      [$landingView, $setupView, $chatView].forEach((v) =>
+        v.classList.toggle("active", v.id === id)
+      );
+    }
+
+    function showLanding() {
+      showView("landing-view");
+      loadSessions();
+    }
+
+    function showSetup() {
+      showView("setup-view");
+      $setupName.value = "";
+      $setupProject.value = "";
+      useProject = false;
+      $choiceFree.classList.add("selected");
+      $choiceProject.classList.remove("selected");
+      $setupProject.classList.add("hidden");
+      $setupModel.value = "claude-haiku-4-5-20251001"; // default for free chat
+      loadProjects();
+      setTimeout(() => $setupName.focus(), 100);
+    }
+
+    function showChat(name, project, model) {
+      currentSession = { name, project, model: model || "claude-haiku-4-5-20251001" };
+      $chatTitleName.textContent = name;
+      $chatTitleProject.textContent = project ? project : "free session";
+      $chatModel.value = currentSession.model;
+      $messagesContainer.innerHTML = "";
+      $chatStatus.textContent = "";
+      $chatInput.value = "";
+      sending = false;
+      $sendBtn.disabled = false;
+      showView("chat-view");
+      loadMessages(name);
+      setTimeout(() => $chatInput.focus(), 100);
+    }
+
+    // ─── Landing: load sessions ───
+    async function loadSessions() {
+      try {
+        const res = await fetch("/api/sessions");
+        const list = await res.json();
+        $sessionsList.innerHTML = "";
+
+        if (list.length === 0) {
+          $sessionsList.innerHTML =
+            '<div class="empty-state"><p>No sessions yet</p><p class="hint">Tap + to start your first chat</p></div>';
+          return;
+        }
+
+        list.forEach((s) => {
+          const msgs = Math.floor(s.messageCount / 2);
+          const modelShort = shortModel(s.model);
+          const el = document.createElement("div");
+          el.className = "session-item";
+          el.innerHTML = `
+            <div class="session-icon">${s.project ? "P" : "F"}</div>
+            <div class="session-info">
+              <div class="session-name">${esc(s.name)}</div>
+              <div class="session-meta">
+                ${s.project ? '<span class="tag">' + esc(s.project) + "</span>" : '<span class="tag">free</span>'}
+                <span class="tag">${modelShort}</span>
+                ${msgs} exchange${msgs !== 1 ? "s" : ""}
+              </div>
+            </div>
+            <div class="session-arrow">&rsaquo;</div>
+          `;
+          el.addEventListener("click", () => showChat(s.name, s.project, s.model));
+          $sessionsList.appendChild(el);
+        });
+      } catch {
+        $sessionsList.innerHTML = '<div class="empty-state"><p>Failed to load sessions</p></div>';
       }
+    }
+
+    // ─── Setup: project choice ───
+    $choiceFree.addEventListener("click", () => {
+      useProject = false;
+      $choiceFree.classList.add("selected");
+      $choiceProject.classList.remove("selected");
+      $setupProject.classList.add("hidden");
+      $setupModel.value = "claude-haiku-4-5-20251001";
     });
 
-    // Load available projects on page load
+    $choiceProject.addEventListener("click", () => {
+      useProject = true;
+      $choiceProject.classList.add("selected");
+      $choiceFree.classList.remove("selected");
+      $setupProject.classList.remove("hidden");
+      $setupModel.value = "claude-sonnet-4-6";
+    });
+
     async function loadProjects() {
       try {
         const res = await fetch("/api/projects");
         const projects = await res.json();
+        $setupProject.innerHTML = '<option value="">Select a project...</option>';
         projects.forEach((name) => {
           const opt = document.createElement("option");
           opt.value = name;
           opt.textContent = name;
-          $project.appendChild(opt);
+          $setupProject.appendChild(opt);
         });
       } catch {}
     }
-    loadProjects();
 
-    $run.addEventListener("click", async () => {
-      const prompt = $prompt.value.trim();
-      if (!prompt) return;
+    $newChatBtn.addEventListener("click", showSetup);
+    $setupCancel.addEventListener("click", showLanding);
 
-      $run.disabled = true;
-      $output.classList.remove("visible");
-      $output.textContent = "";
-      $usage.classList.remove("visible");
+    $setupStart.addEventListener("click", () => {
+      const name = $setupName.value.trim();
+      if (!name) {
+        $setupName.style.borderColor = "#ef4444";
+        $setupName.focus();
+        setTimeout(() => ($setupName.style.borderColor = ""), 1500);
+        return;
+      }
+      const project = useProject ? $setupProject.value : null;
+      if (useProject && !project) {
+        $setupProject.style.borderColor = "#ef4444";
+        setTimeout(() => ($setupProject.style.borderColor = ""), 1500);
+        return;
+      }
+      showChat(name, project, $setupModel.value);
+    });
+
+    // ─── Chat: load history ───
+    async function loadMessages(sessionName) {
+      try {
+        const res = await fetch(`/api/sessions/${encodeURIComponent(sessionName)}/messages`);
+        if (!res.ok) return; // new session, no history yet
+        const data = await res.json();
+        // Sync model from server if session already exists
+        if (data.model && currentSession) {
+          currentSession.model = data.model;
+          $chatModel.value = data.model;
+        }
+        $messagesContainer.innerHTML = "";
+        data.messages.forEach((m) => appendMessage(m.role, m.content, m.usage));
+        scrollToBottom();
+      } catch {}
+    }
+
+    function appendMessage(role, content, usage) {
+      const row = document.createElement("div");
+      row.className = `message-row ${role}`;
+
+      const sender = document.createElement("div");
+      sender.className = "message-sender";
+      sender.textContent = role === "user" ? "You" : "Claude";
+
+      const bubble = document.createElement("div");
+      bubble.className = "message-bubble";
+      bubble.textContent = content;
+
+      row.appendChild(sender);
+      row.appendChild(bubble);
+
+      if (usage && role === "assistant") {
+        const usageEl = document.createElement("div");
+        usageEl.className = "message-usage";
+        const parts = [];
+        if (usage.duration_ms) parts.push((usage.duration_ms / 1000).toFixed(1) + "s");
+        if (usage.cost_usd) parts.push("$" + usage.cost_usd.toFixed(4));
+        if (usage.num_turns) parts.push(usage.num_turns + " turn" + (usage.num_turns > 1 ? "s" : ""));
+        usageEl.textContent = parts.join(" \u00b7 ");
+        row.appendChild(usageEl);
+      }
+
+      $messagesContainer.appendChild(row);
+      scrollToBottom();
+      return bubble;
+    }
+
+    function appendThinking() {
+      const row = document.createElement("div");
+      row.className = "message-row assistant";
+      row.id = "thinking-row";
+
+      const sender = document.createElement("div");
+      sender.className = "message-sender";
+      sender.textContent = "Claude";
+
+      const bubble = document.createElement("div");
+      bubble.className = "message-bubble thinking-dots";
+      bubble.textContent = "Thinking";
+
+      row.appendChild(sender);
+      row.appendChild(bubble);
+      $messagesContainer.appendChild(row);
+      scrollToBottom();
+      return { row, bubble };
+    }
+
+    function scrollToBottom() {
+      requestAnimationFrame(() => {
+        $messagesContainer.scrollTop = $messagesContainer.scrollHeight;
+      });
+    }
+
+    // ─── Chat: send message ───
+    async function sendMessage() {
+      const text = $chatInput.value.trim();
+      if (!text || sending) return;
+
+      sending = true;
+      $sendBtn.disabled = true;
+      $chatInput.value = "";
+      autoResize();
+
+      appendMessage("user", text, null);
+
+      const { row: thinkingRow, bubble: thinkingBubble } = appendThinking();
       setStatus("running", "Running...");
 
       try {
-        const body = { prompt };
-        const cwd = useCustomPath ? $cwd.value.trim() : $project.value;
-        const session = $session.value.trim();
-        if (cwd) body.cwd = cwd;
-        if (session) body.session = session;
+        const body = { prompt: text, session: currentSession.name, model: currentSession.model };
+        if (currentSession.project) body.cwd = currentSession.project;
 
         const res = await fetch("/api/run", {
           method: "POST",
@@ -291,58 +745,101 @@
         const { job_id, error } = await res.json();
         if (error) throw new Error(error);
 
-        pollTimer = setInterval(() => pollStatus(job_id), 2000);
+        pollTimer = setInterval(() => pollJob(job_id, thinkingRow, thinkingBubble), 2000);
       } catch (err) {
+        thinkingRow.remove();
         setStatus("error", err.message);
-        $run.disabled = false;
+        sending = false;
+        $sendBtn.disabled = false;
       }
-    });
+    }
 
-    async function pollStatus(jobId) {
+    async function pollJob(jobId, thinkingRow, thinkingBubble) {
       try {
         const res = await fetch(`/api/status/${jobId}`);
         const data = await res.json();
 
-        if (data.status === "done") {
+        if (data.status === "done" || data.status === "error") {
           clearInterval(pollTimer);
-          setStatus("done", "Done");
-          showOutput(data.output);
-          showUsage(data.usage);
-          $run.disabled = false;
-        } else if (data.status === "error") {
-          clearInterval(pollTimer);
-          setStatus("error", "Error (exit " + data.exitCode + ")");
-          showOutput(data.output || data.stderr || "Unknown error");
-          showUsage(data.usage);
-          $run.disabled = false;
+          pollTimer = null;
+
+          // Replace thinking indicator with real message
+          thinkingRow.remove();
+          const content = data.output || data.stderr || "No response";
+          appendMessage("assistant", content, data.usage);
+
+          setStatus(
+            data.status === "done" ? "" : "error",
+            data.status === "done" ? "" : "Error (exit " + data.exitCode + ")"
+          );
+          sending = false;
+          $sendBtn.disabled = false;
+          $chatInput.focus();
         }
       } catch {
         clearInterval(pollTimer);
+        pollTimer = null;
+        thinkingRow.remove();
         setStatus("error", "Lost connection");
-        $run.disabled = false;
+        sending = false;
+        $sendBtn.disabled = false;
       }
     }
 
     function setStatus(type, text) {
-      $status.className = "status " + type;
-      $status.textContent = text;
+      $chatStatus.className = "chat-status" + (type ? " " + type : "");
+      $chatStatus.textContent = text;
     }
 
-    function showOutput(text) {
-      $output.textContent = text;
-      $output.classList.add("visible");
+    // ─── Chat: input handling ───
+    $sendBtn.addEventListener("click", sendMessage);
+
+    $chatInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    $chatInput.addEventListener("input", autoResize);
+
+    function autoResize() {
+      $chatInput.style.height = "auto";
+      $chatInput.style.height = Math.min($chatInput.scrollHeight, 120) + "px";
     }
 
-    function showUsage(usage) {
-      if (!usage) return;
-      document.getElementById("u-duration").textContent = (usage.duration_ms / 1000).toFixed(1) + "s";
-      document.getElementById("u-cost").textContent = "$" + usage.cost_usd.toFixed(4);
-      document.getElementById("u-in").textContent = usage.input_tokens.toLocaleString();
-      document.getElementById("u-out").textContent = usage.output_tokens.toLocaleString();
-      document.getElementById("u-cache").textContent = usage.cache_read_tokens.toLocaleString();
-      document.getElementById("u-turns").textContent = usage.num_turns;
-      $usage.classList.add("visible");
+    // ─── Chat: model change ───
+    $chatModel.addEventListener("change", () => {
+      if (currentSession) currentSession.model = $chatModel.value;
+    });
+
+    // ─── Chat: back button ───
+    $chatBack.addEventListener("click", () => {
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+      currentSession = null;
+      sending = false;
+      showLanding();
+    });
+
+    // ─── Utils ───
+    function esc(str) {
+      const d = document.createElement("div");
+      d.textContent = str;
+      return d.innerHTML;
     }
+
+    function shortModel(m) {
+      if (!m) return "haiku";
+      if (m.includes("opus")) return "opus";
+      if (m.includes("sonnet")) return "sonnet";
+      return "haiku";
+    }
+
+    // ─── Init ───
+    loadSessions();
   </script>
 </body>
 </html>

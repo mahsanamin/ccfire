@@ -23,7 +23,7 @@ curl -X POST http://localhost:8283/api/run \
 | Field     | Type   | Required | Description                                                        |
 | --------- | ------ | -------- | ------------------------------------------------------------------ |
 | `prompt`  | string | Yes      | The prompt to send to Claude                                       |
-| `cwd`     | string | No       | Project directory name (relative to mounted `PROJECTS_DIR`). Defaults to `/projects` root |
+| `cwd`     | string | No       | Project directory name (relative to mounted `PROJECTS_DIR`) or an absolute path inside the container. Defaults to `/projects` root |
 | `session` | string | No       | Session name for conversation continuity. Reuse the same name to maintain context across multiple prompts |
 
 ### Response

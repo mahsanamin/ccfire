@@ -57,6 +57,11 @@ curl -X POST http://localhost:8283/api/run \
   -H "Content-Type: application/json" \
   -d '{"prompt": "explain the auth flow", "cwd": "my-project", "session": "review"}'
 
+# cwd also accepts absolute paths inside the container
+curl -X POST http://localhost:8283/api/run \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "list files", "cwd": "/projects/my-project/src"}'
+
 # Poll for result
 curl http://localhost:8283/api/status/<job_id>
 ```
